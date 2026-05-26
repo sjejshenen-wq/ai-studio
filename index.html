@@ -34,6 +34,17 @@ body {
     padding-bottom: 10px;
 }
 
+.badge {
+    background: rgba(255, 193, 7, 0.2);
+    border: 1px solid #ffc107;
+    color: #ffc107;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    margin-top: 10px;
+    line-height: 1.4;
+}
+
 label {
     display: block;
     margin-top: 15px;
@@ -207,28 +218,6 @@ h3 {
     color: #fff;
     font-size: 14px;
 }
-
-.info-badge {
-    background: rgba(76, 175, 80, 0.15);
-    border: 1px solid rgba(76, 175, 80, 0.5);
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 11px;
-    color: #4caf50;
-    margin-top: 10px;
-    line-height: 1.4;
-}
-
-.quality-note {
-    background: rgba(33, 150, 243, 0.15);
-    border: 1px solid rgba(33, 150, 243, 0.5);
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 11px;
-    color: #2196f3;
-    margin-top: 10px;
-    line-height: 1.4;
-}
 </style>
 </head>
 
@@ -238,44 +227,32 @@ h3 {
 
 <h2>🎨 Premium AI Studio</h2>
 
-<div class="info-badge">
-    ✓ High-Quality Generation • No Sign-Up
+<div class="badge">
+    ⭐ Powered by GPT-4 Vision • Ultra High Quality • No API Key
 </div>
 
 <label for="prompt">📝 Detailed Prompt</label>
-<textarea id="prompt" rows="4">A stunning futuristic cyberpunk city at night with neon lights, bioluminescent plants, detailed architecture</textarea>
+<textarea id="prompt" rows="4">A stunning futuristic cyberpunk city at night with neon lights, bioluminescent plants, detailed architecture, cinematic lighting</textarea>
 
-<div class="quality-note">
-💡 Tip: More specific details = Better results. Include lighting, mood, and artistic style.
-</div>
+<label for="model">🤖 AI Model</label>
+<select id="model">
+    <option value="gpt-image-2">✨ GPT-Image-2 (Best Quality - Recommended)</option>
+    <option value="gpt-image-1.5">⭐ GPT-Image-1.5 (Very Good)</option>
+    <option value="dall-e-3">🎨 DALL-E 3 (Alternative)</option>
+</select>
 
 <label for="style">🎨 Art Style</label>
 <select id="style">
-    <option value="photorealistic">Photorealistic (Most Realistic)</option>
-    <option value="concept-art">Concept Art (Artistic)</option>
-    <option value="oil-painting">Oil Painting (Classical)</option>
-    <option value="anime">Anime (Stylized)</option>
-    <option value="3d-render">3D Render (CGI)</option>
-    <option value="watercolor">Watercolor (Artistic)</option>
-    <option value="digital-art">Digital Art (Modern)</option>
-</select>
-
-<label for="quality">⭐ Quality Level</label>
-<select id="quality">
-    <option value="ultra">Ultra High (Slower, Best)</option>
-    <option value="high">High Quality</option>
-    <option value="standard">Standard (Fast)</option>
+    <option value="photorealistic">Photorealistic 8K Cinematic</option>
+    <option value="concept-art">Concept Art Studio Quality</option>
+    <option value="oil-painting">Oil Painting Renaissance</option>
+    <option value="anime">Anime High Quality</option>
+    <option value="3d-render">3D Render Octane</option>
+    <option value="watercolor">Watercolor Artistic</option>
 </select>
 
 <label for="negative">❌ What to Avoid</label>
-<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, ugly, watermark</textarea>
-
-<label for="size">📐 Resolution</label>
-<select id="size">
-    <option value="512">512x512 (Fast)</option>
-    <option value="640">640x640</option>
-    <option value="768">768x768 (Best Quality)</option>
-</select>
+<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, ugly, watermark, text</textarea>
 
 <div class="button-group">
     <button id="generateBtn" onclick="generateImage()">✨ GENERATE</button>
@@ -291,7 +268,7 @@ h3 {
 
 <h3>Preview</h3>
 <div class="result-container">
-    <img id="result" style="display:none;"/>
+    <div id="result" style="display:none;"></div>
     <div class="loader" id="loader" style="display:none;"></div>
 </div>
 
@@ -300,27 +277,20 @@ h3 {
 
 </div>
 
+<script src="https://js.puter.com/v2/"></script>
+
 <script>
 
 let currentImageUrl = null;
 let isGenerating = false;
 
-// Map style names to quality keywords
 const styleMap = {
-    'photorealistic': 'ultra realistic photorealistic professional photography cinematic lighting',
-    'concept-art': 'concept art digital painting trending professional detailed',
+    'photorealistic': 'photorealistic 8k professional cinematic lighting',
+    'concept-art': 'concept art digital painting trending artstation',
     'oil-painting': 'oil painting renaissance style masterpiece',
-    'anime': 'anime style vibrant colors detailed manga art',
-    '3d-render': '3d render octane render ray tracing photorealistic',
-    'watercolor': 'watercolor painting ink wash artistic elegant',
-    'digital-art': 'digital art illustration professional'
-};
-
-// Quality level keywords
-const qualityKeywords = {
-    'ultra': 'ultra detailed masterpiece 8k award-winning',
-    'high': 'high quality 4k detailed professional',
-    'standard': 'good quality detailed'
+    'anime': 'anime style high quality detailed vibrant',
+    '3d-render': '3d render octane ray tracing volumetric',
+    'watercolor': 'watercolor painting ink wash artistic'
 };
 
 function showStatus(message, type = 'info') {
@@ -329,35 +299,19 @@ function showStatus(message, type = 'info') {
     status.className = `show ${type}`;
 }
 
-function hideStatus() {
-    document.getElementById('status').className = '';
-}
-
-function buildEnhancedPrompt(basePrompt, style, quality) {
-    const styleDetails = styleMap[style] || '';
-    const qualityDetails = qualityKeywords[quality] || qualityKeywords['high'];
+function buildPrompt(basePrompt, style, negative) {
+    let styleDetails = styleMap[style] || '';
+    let prompt = basePrompt;
     
-    let fullPrompt = basePrompt;
-    
-    // Add style if not already in prompt
-    if (styleDetails && !fullPrompt.toLowerCase().includes(styleDetails.split(' ')[0])) {
-        fullPrompt += ' ' + styleDetails;
+    if (styleDetails && !prompt.toLowerCase().includes(styleDetails.split(' ')[0])) {
+        prompt += ', ' + styleDetails;
     }
     
-    // Add quality modifiers
-    fullPrompt += ' ' + qualityDetails;
-    
-    // Add universal boosters (without too many)
-    fullPrompt += ' sharp focus well composed';
-    
-    return fullPrompt.trim();
+    return prompt;
 }
 
 async function generateImage() {
-    if (isGenerating) {
-        showStatus('⏳ Already generating... please wait', 'info');
-        return;
-    }
+    if (isGenerating) return;
 
     const prompt = document.getElementById('prompt').value.trim();
     
@@ -371,63 +325,46 @@ async function generateImage() {
     try {
         document.getElementById('generateBtn').disabled = true;
         document.getElementById('loader').style.display = 'block';
-        document.getElementById('result').style.display = 'none';
+        const resultDiv = document.getElementById('result');
+        resultDiv.style.display = 'none';
+        resultDiv.innerHTML = '';
         document.getElementById('downloadBtn').style.display = 'none';
 
+        const model = document.getElementById('model').value;
         const style = document.getElementById('style').value;
-        const quality = document.getElementById('quality').value;
-        const size = document.getElementById('size').value;
+        const negative = document.getElementById('negative').value;
 
-        // Build enhanced prompt
-        const enhancedPrompt = buildEnhancedPrompt(prompt, style, quality);
+        const fullPrompt = buildPrompt(prompt, style, negative);
         
-        showStatus(`⏳ Generating ${size}x${size} image...`, 'info');
+        showStatus(`⏳ Generating with ${model}... (may take 60-90 seconds for best quality)`, 'info');
 
-        // Using Pollinations.ai API
-        const encodedPrompt = encodeURIComponent(enhancedPrompt);
-        const seed = Math.floor(Math.random() * 999999);
-        const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size}&height=${size}&seed=${seed}`;
+        // Use Puter.js AI API with GPT models
+        const imageElement = await puter.ai.txt2img(fullPrompt, {
+            model: model,
+            negative_prompt: negative
+        });
 
-        // Test if image loads
-        const img = new Image();
-        let loadTimeout;
+        if (!imageElement || !imageElement.src) {
+            throw new Error('Failed to generate image - invalid response');
+        }
+
+        currentImageUrl = imageElement.src;
         
-        img.onload = () => {
-            clearTimeout(loadTimeout);
-            currentImageUrl = url;
-            document.getElementById('result').src = url;
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('downloadBtn').style.display = 'block';
-            document.getElementById('loader').style.display = 'none';
-            
-            addToHistory(url);
-            showStatus('✅ Image generated successfully!', 'success');
-            document.getElementById('generateBtn').disabled = false;
-            isGenerating = false;
-        };
-
-        img.onerror = () => {
-            clearTimeout(loadTimeout);
-            document.getElementById('loader').style.display = 'none';
-            showStatus('❌ Generation failed. Try a simpler prompt or try again.', 'error');
-            document.getElementById('generateBtn').disabled = false;
-            isGenerating = false;
-        };
-
-        // Timeout after 120 seconds
-        loadTimeout = setTimeout(() => {
-            document.getElementById('loader').style.display = 'none';
-            showStatus('⏱️ Generation took too long. Try a simpler prompt.', 'error');
-            document.getElementById('generateBtn').disabled = false;
-            isGenerating = false;
-        }, 120000);
-
-        img.src = url;
+        // Copy the image element
+        const resultDiv2 = document.getElementById('result');
+        resultDiv2.innerHTML = '';
+        resultDiv2.appendChild(imageElement.cloneNode(true));
+        resultDiv2.style.display = 'block';
+        document.getElementById('downloadBtn').style.display = 'block';
+        
+        addToHistory(imageElement.src);
+        showStatus('✅ Ultra high-quality image generated!', 'success');
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Generation error:', error);
+        showStatus(`❌ ${error.message || 'Generation failed. Try again!'}`, 'error');
+    } finally {
         document.getElementById('loader').style.display = 'none';
-        showStatus(`❌ Error: ${error.message}`, 'error');
         document.getElementById('generateBtn').disabled = false;
         isGenerating = false;
     }
@@ -437,8 +374,16 @@ function addToHistory(url) {
     const img = document.createElement('img');
     img.src = url;
     img.onclick = () => {
-        document.getElementById('result').src = url;
-        document.getElementById('result').style.display = 'block';
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = '';
+        const newImg = document.createElement('img');
+        newImg.src = url;
+        newImg.style.maxWidth = '95%';
+        newImg.style.maxHeight = '95%';
+        newImg.style.borderRadius = '10px';
+        newImg.style.boxShadow = '0 10px 40px rgba(108, 92, 231, 0.3)';
+        resultDiv.appendChild(newImg);
+        resultDiv.style.display = 'block';
         currentImageUrl = url;
         document.getElementById('downloadBtn').style.display = 'block';
     };
@@ -446,7 +391,6 @@ function addToHistory(url) {
     const gallery = document.getElementById('gallery');
     gallery.insertBefore(img, gallery.firstChild);
     
-    // Keep only last 10 images
     while (gallery.children.length > 10) {
         gallery.removeChild(gallery.lastChild);
     }
@@ -468,15 +412,15 @@ function downloadImage() {
 
 function clearHistory() {
     document.getElementById('gallery').innerHTML = '';
+    document.getElementById('result').innerHTML = '';
     document.getElementById('result').style.display = 'none';
     document.getElementById('downloadBtn').style.display = 'none';
     document.getElementById('loader').style.display = 'none';
     currentImageUrl = null;
-    hideStatus();
 }
 
 window.addEventListener('load', () => {
-    showStatus('✓ Ready! Enter your prompt and click GENERATE', 'info');
+    showStatus('✓ Ready! Using GPT-4 Image Generation. Click GENERATE!', 'info');
 });
 
 </script>
