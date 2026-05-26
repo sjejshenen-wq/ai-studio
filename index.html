@@ -243,10 +243,10 @@ h3 {
 </div>
 
 <label for="prompt">📝 Detailed Prompt</label>
-<textarea id="prompt" rows="4">A stunning, highly detailed futuristic cyberpunk metropolis at night. Neon-lit skyscrapers with holographic billboards, bioluminescent plants in vertical gardens, flying cars, volumetric light rays, realistic reflections in chrome and glass surfaces, cinematic composition, 8K resolution, photorealistic, trending on ArtStation, masterpiece</textarea>
+<textarea id="prompt" rows="4">A stunning futuristic cyberpunk city at night with neon lights, bioluminescent plants, detailed architecture</textarea>
 
 <div class="quality-note">
-💡 Tip: More specific details = Better results. Include lighting, mood, composition, and artistic style.
+💡 Tip: More specific details = Better results. Include lighting, mood, and artistic style.
 </div>
 
 <label for="style">🎨 Art Style</label>
@@ -262,20 +262,19 @@ h3 {
 
 <label for="quality">⭐ Quality Level</label>
 <select id="quality">
-    <option value="high-quality, 8k, ultra detailed, award-winning">Ultra High (Slower)</option>
-    <option value="high quality, 4k, detailed, professional">High Quality</option>
-    <option value="good quality, detailed">Standard</option>
+    <option value="ultra">Ultra High (Slower, Best)</option>
+    <option value="high">High Quality</option>
+    <option value="standard">Standard (Fast)</option>
 </select>
 
 <label for="negative">❌ What to Avoid</label>
-<textarea id="negative" rows="2">blurry, low quality, distorted, deformed, bad anatomy, ugly, watermark, text, words, letters, poorly drawn, low-res</textarea>
+<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, ugly, watermark</textarea>
 
 <label for="size">📐 Resolution</label>
 <select id="size">
     <option value="512">512x512 (Fast)</option>
     <option value="640">640x640</option>
     <option value="768">768x768 (Best Quality)</option>
-    <option value="832">832x832</option>
 </select>
 
 <div class="button-group">
@@ -306,15 +305,22 @@ h3 {
 let currentImageUrl = null;
 let isGenerating = false;
 
-// Map style names to detailed quality prompts
+// Map style names to quality keywords
 const styleMap = {
-    'photorealistic': 'ultra realistic, photorealistic, professional photography, cinematic lighting, volumetric light, color graded, award-winning, masterpiece',
-    'concept-art': 'concept art, digital painting, trending on ArtStation, professional, detailed, rich colors',
-    'oil-painting': 'oil painting, renaissance style, museum quality, masterpiece, brush strokes, classical art',
-    'anime': 'anime style, vibrant colors, detailed, manga art, cel-shading',
-    '3d-render': '3d render, octane render, ray tracing, volumetric lighting, photorealistic, cinema4d',
-    'watercolor': 'watercolor painting, ink wash, artistic, flowing brushstrokes, elegant',
-    'digital-art': 'digital art, illustration, professional, trending on artstation, highly detailed'
+    'photorealistic': 'ultra realistic photorealistic professional photography cinematic lighting',
+    'concept-art': 'concept art digital painting trending professional detailed',
+    'oil-painting': 'oil painting renaissance style masterpiece',
+    'anime': 'anime style vibrant colors detailed manga art',
+    '3d-render': '3d render octane render ray tracing photorealistic',
+    'watercolor': 'watercolor painting ink wash artistic elegant',
+    'digital-art': 'digital art illustration professional'
+};
+
+// Quality level keywords
+const qualityKeywords = {
+    'ultra': 'ultra detailed masterpiece 8k award-winning',
+    'high': 'high quality 4k detailed professional',
+    'standard': 'good quality detailed'
 };
 
 function showStatus(message, type = 'info') {
@@ -328,85 +334,101 @@ function hideStatus() {
 }
 
 function buildEnhancedPrompt(basePrompt, style, quality) {
-    // Get the style details
-    const styleDetails = styleMap[style] || style;
+    const styleDetails = styleMap[style] || '';
+    const qualityDetails = qualityKeywords[quality] || qualityKeywords['high'];
     
-    // Combine: base prompt + style + quality
     let fullPrompt = basePrompt;
     
     // Add style if not already in prompt
-    if (!fullPrompt.toLowerCase().includes(styleDetails.split(',')[0])) {
-        fullPrompt += ', ' + styleDetails;
+    if (styleDetails && !fullPrompt.toLowerCase().includes(styleDetails.split(' ')[0])) {
+        fullPrompt += ' ' + styleDetails;
     }
     
     // Add quality modifiers
-    fullPrompt += ', ' + quality;
+    fullPrompt += ' ' + qualityDetails;
     
-    // Add universal quality boosters
-    fullPrompt += ', intricate details, professional lighting, balanced composition, perfect anatomy, sharp focus, flawless';
+    // Add universal boosters (without too many)
+    fullPrompt += ' sharp focus well composed';
     
-    return fullPrompt;
+    return fullPrompt.trim();
 }
 
 async function generateImage() {
-    if (isGenerating) return;
+    if (isGenerating) {
+        showStatus('⏳ Already generating... please wait', 'info');
+        return;
+    }
 
+    const prompt = document.getElementById('prompt').value.trim();
+    
+    if (!prompt) {
+        showStatus('❌ Please enter a prompt!', 'error');
+        return;
+    }
+
+    isGenerating = true;
+    
     try {
-        isGenerating = true;
         document.getElementById('generateBtn').disabled = true;
         document.getElementById('loader').style.display = 'block';
         document.getElementById('result').style.display = 'none';
         document.getElementById('downloadBtn').style.display = 'none';
 
-        const prompt = document.getElementById('prompt').value.trim();
         const style = document.getElementById('style').value;
         const quality = document.getElementById('quality').value;
-        const negative = document.getElementById('negative').value;
         const size = document.getElementById('size').value;
 
-        if (!prompt) {
-            showStatus('❌ Please enter a detailed prompt!', 'error');
-            document.getElementById('generateBtn').disabled = false;
-            return;
-        }
-
-        // Build enhanced prompt with quality boosters
+        // Build enhanced prompt
         const enhancedPrompt = buildEnhancedPrompt(prompt, style, quality);
         
-        showStatus(`⏳ Generating high-quality image... ${size}x${size}`, 'info');
+        showStatus(`⏳ Generating ${size}x${size} image...`, 'info');
 
-        // Using Pollinations.ai API with quality parameters
+        // Using Pollinations.ai API
         const encodedPrompt = encodeURIComponent(enhancedPrompt);
-        const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size}&height=${size}&seed=${Math.floor(Math.random() * 999999)}&nologo=true`;
+        const seed = Math.floor(Math.random() * 999999);
+        const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size}&height=${size}&seed=${seed}`;
 
         // Test if image loads
         const img = new Image();
+        let loadTimeout;
         
         img.onload = () => {
+            clearTimeout(loadTimeout);
             currentImageUrl = url;
             document.getElementById('result').src = url;
             document.getElementById('result').style.display = 'block';
             document.getElementById('downloadBtn').style.display = 'block';
+            document.getElementById('loader').style.display = 'none';
             
             addToHistory(url);
-            showStatus('✅ High-quality image generated! Perfect output 🎉', 'success');
+            showStatus('✅ Image generated successfully!', 'success');
             document.getElementById('generateBtn').disabled = false;
+            isGenerating = false;
         };
 
         img.onerror = () => {
-            showStatus('⚠️ Generation failed. Try simplifying your prompt or use fewer quality terms.', 'error');
+            clearTimeout(loadTimeout);
+            document.getElementById('loader').style.display = 'none';
+            showStatus('❌ Generation failed. Try a simpler prompt or try again.', 'error');
             document.getElementById('generateBtn').disabled = false;
+            isGenerating = false;
         };
 
-        // Start loading
+        // Timeout after 120 seconds
+        loadTimeout = setTimeout(() => {
+            document.getElementById('loader').style.display = 'none';
+            showStatus('⏱️ Generation took too long. Try a simpler prompt.', 'error');
+            document.getElementById('generateBtn').disabled = false;
+            isGenerating = false;
+        }, 120000);
+
         img.src = url;
 
     } catch (error) {
         console.error('Error:', error);
-        showStatus(`❌ ${error.message}`, 'error');
-        document.getElementById('generateBtn').disabled = false;
-    } finally {
         document.getElementById('loader').style.display = 'none';
+        showStatus(`❌ Error: ${error.message}`, 'error');
+        document.getElementById('generateBtn').disabled = false;
         isGenerating = false;
     }
 }
@@ -421,11 +443,20 @@ function addToHistory(url) {
         document.getElementById('downloadBtn').style.display = 'block';
     };
     
-    document.getElementById('gallery').insertBefore(img, document.getElementById('gallery').firstChild);
+    const gallery = document.getElementById('gallery');
+    gallery.insertBefore(img, gallery.firstChild);
+    
+    // Keep only last 10 images
+    while (gallery.children.length > 10) {
+        gallery.removeChild(gallery.lastChild);
+    }
 }
 
 function downloadImage() {
-    if (!currentImageUrl) return;
+    if (!currentImageUrl) {
+        showStatus('❌ No image to download', 'error');
+        return;
+    }
     
     const a = document.createElement('a');
     a.href = currentImageUrl;
@@ -439,11 +470,13 @@ function clearHistory() {
     document.getElementById('gallery').innerHTML = '';
     document.getElementById('result').style.display = 'none';
     document.getElementById('downloadBtn').style.display = 'none';
+    document.getElementById('loader').style.display = 'none';
+    currentImageUrl = null;
     hideStatus();
 }
 
 window.addEventListener('load', () => {
-    showStatus('✓ Ready! Detailed prompts = Better images. Click GENERATE!', 'info');
+    showStatus('✓ Ready! Enter your prompt and click GENERATE', 'info');
 });
 
 </script>
