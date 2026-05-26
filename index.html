@@ -44,7 +44,7 @@ label {
     letter-spacing: 0.5px;
 }
 
-textarea, select, input[type="text"], input[type="range"] {
+textarea, select, input[type="text"] {
     width: 100%;
     margin-top: 8px;
     background: rgba(28, 28, 43, 0.8);
@@ -201,11 +201,6 @@ button:disabled {
     100% { transform: rotate(360deg); }
 }
 
-.step-value {
-    color: #6c5ce7;
-    font-weight: bold;
-}
-
 h3 {
     margin-top: 0;
     color: #fff;
@@ -232,48 +227,38 @@ h3 {
 <h2>🎨 AI Image Studio</h2>
 
 <div class="info-badge">
-    ✓ No API key needed • Powered by Puter.js • Works instantly
+    ✓ Free AI Image Generation • No Sign-Up Required
 </div>
 
-<label for="model">AI Model</label>
-<select id="model">
-    <option value="flux">⚡ Flux (Fastest & Best)</option>
-    <option value="dall-e-3">✨ DALL-E 3 (Creative)</option>
-    <option value="stable-diffusion-xl">⭐ Stable Diffusion XL</option>
-    <option value="gemini-flash-image">🌟 Gemini Flash</option>
-</select>
-
 <label for="prompt">Prompt (Be Descriptive!)</label>
-<textarea id="prompt" rows="3">a serene futuristic city with bioluminescent plants, cyberpunk aesthetic, neon lights, cinematic lighting, highly detailed, 8k, masterpiece</textarea>
+<textarea id="prompt" rows="3">a serene futuristic city with bioluminescent plants, cyberpunk aesthetic, neon lights, cinematic lighting, highly detailed, 8k</textarea>
 
 <label for="style">Art Style</label>
 <select id="style">
     <option value="">None</option>
-    <option value=", ultra realistic, cinematic lighting, award-winning photography, 8k">Photorealistic</option>
-    <option value=", anime style, vibrant colors, manga art, detailed">Anime</option>
-    <option value=", 3d render, octane render, ray tracing, volumetric lighting">3D Render</option>
-    <option value=", oil painting, renaissance, baroque, masterpiece">Classical Art</option>
-    <option value=", pixel art, 8-bit, retro gaming, nostalgic">Pixel Art</option>
-    <option value=", concept art, digital painting, trending on artstation">Concept Art</option>
-    <option value=", watercolor painting, ink wash, artistic">Watercolor</option>
+    <option value=" ultra realistic, cinematic lighting, award-winning photography">Photorealistic</option>
+    <option value=" anime style, vibrant colors, manga art">Anime</option>
+    <option value=" 3d render, octane render, ray tracing">3D Render</option>
+    <option value=" oil painting, renaissance, baroque">Classical Art</option>
+    <option value=" pixel art, 8-bit, retro gaming">Pixel Art</option>
+    <option value=" concept art, digital painting">Concept Art</option>
 </select>
 
 <label for="negative">What to Avoid</label>
-<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, watermark, text, deformed, ugly, disfigured</textarea>
+<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, watermark, text</textarea>
 
-<label for="aspectRatio">Aspect Ratio</label>
-<select id="aspectRatio">
-    <option value="1:1">Square (1:1)</option>
-    <option value="16:9">Landscape (16:9)</option>
-    <option value="9:16">Portrait (9:16)</option>
-    <option value="4:3">Standard (4:3)</option>
+<label for="size">Image Size</label>
+<select id="size">
+    <option value="512">512x512 (Fast)</option>
+    <option value="640">640x640</option>
+    <option value="768">768x768 (Best)</option>
 </select>
 
 <div class="button-group">
     <button id="generateBtn" onclick="generateImage()">🎨 GENERATE</button>
     <button id="downloadBtn" onclick="downloadImage()" style="display:none;">⬇️ DOWNLOAD</button>
-    <button id="clearBtn" onclick="clearHistory()">🗑️ CLEAR</button>
 </div>
+<button id="clearBtn" onclick="clearHistory()">🗑️ CLEAR</button>
 
 <div id="status"></div>
 
@@ -292,12 +277,9 @@ h3 {
 
 </div>
 
-<script src="https://js.puter.com/v2/"></script>
-
 <script>
 
 let currentImageUrl = null;
-let imageHistory = [];
 let isGenerating = false;
 
 function showStatus(message, type = 'info') {
@@ -323,8 +305,7 @@ async function generateImage() {
         const prompt = document.getElementById('prompt').value.trim();
         const style = document.getElementById('style').value;
         const negative = document.getElementById('negative').value;
-        const model = document.getElementById('model').value;
-        const aspectRatio = document.getElementById('aspectRatio').value;
+        const size = document.getElementById('size').value;
 
         if (!prompt) {
             showStatus('❌ Please enter a prompt!', 'error');
@@ -332,48 +313,47 @@ async function generateImage() {
             return;
         }
 
-        // Build the full prompt
         let fullPrompt = prompt + style;
+        
+        showStatus(`⏳ Generating image...`, 'info');
 
-        showStatus(`⏳ Generating with ${model}... (this may take 30-60 seconds)`, 'info');
+        // Using Pollinations.ai API - more reliable
+        const encodedPrompt = encodeURIComponent(fullPrompt);
+        const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size}&height=${size}&seed=${Math.floor(Math.random() * 999999)}`;
 
-        // Use Puter.js AI API
-        const imageElement = await puter.ai.txt2img(fullPrompt, {
-            model: model,
-            negative_prompt: negative,
-            aspect_ratio: aspectRatio
-        });
+        // Test if image loads
+        const img = new Image();
+        
+        img.onload = () => {
+            currentImageUrl = url;
+            document.getElementById('result').src = url;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('downloadBtn').style.display = 'block';
+            
+            addToHistory(url);
+            showStatus('✅ Image generated successfully!', 'success');
+            document.getElementById('generateBtn').disabled = false;
+        };
 
-        if (!imageElement) {
-            throw new Error('Failed to generate image');
-        }
+        img.onerror = () => {
+            showStatus('❌ Failed to generate. Try a different prompt!', 'error');
+            document.getElementById('generateBtn').disabled = false;
+        };
 
-        // Get the image source
-        const imageSrc = imageElement.src;
-        currentImageUrl = imageSrc;
-
-        // Display the image
-        document.getElementById('result').src = imageSrc;
-        document.getElementById('result').style.display = 'block';
-        document.getElementById('downloadBtn').style.display = 'block';
-
-        addToHistory(imageSrc);
-
-        showStatus('✅ Image generated successfully!', 'success');
+        // Start loading
+        img.src = url;
 
     } catch (error) {
-        console.error('Generation error:', error);
-        showStatus(`❌ ${error.message || 'Failed to generate image. Try again!'}`, 'error');
-    } finally {
-        isGenerating = false;
+        console.error('Error:', error);
+        showStatus(`❌ ${error.message}`, 'error');
         document.getElementById('generateBtn').disabled = false;
+    } finally {
         document.getElementById('loader').style.display = 'none';
+        isGenerating = false;
     }
 }
 
 function addToHistory(url) {
-    imageHistory.push(url);
-    
     const img = document.createElement('img');
     img.src = url;
     img.onclick = () => {
@@ -384,12 +364,6 @@ function addToHistory(url) {
     };
     
     document.getElementById('gallery').insertBefore(img, document.getElementById('gallery').firstChild);
-    
-    // Keep only last 15 images in memory
-    if (imageHistory.length > 15) {
-        imageHistory.shift();
-        document.getElementById('gallery').removeChild(document.getElementById('gallery').lastChild);
-    }
 }
 
 function downloadImage() {
@@ -407,12 +381,9 @@ function clearHistory() {
     document.getElementById('gallery').innerHTML = '';
     document.getElementById('result').style.display = 'none';
     document.getElementById('downloadBtn').style.display = 'none';
-    imageHistory = [];
-    currentImageUrl = null;
     hideStatus();
 }
 
-// Show welcome message
 window.addEventListener('load', () => {
     showStatus('✓ Ready! Enter your prompt and click GENERATE', 'info');
 });
