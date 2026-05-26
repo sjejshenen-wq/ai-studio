@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Advanced AI Image Studio</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0b0b14 0%, #1a1a2e 100%);
+    color: white;
+    display: flex;
+    height: 100vh;
+}
+
+.left {
+    width: 380px;
+    background: rgba(17, 17, 34, 0.95);
+    padding: 20px;
+    overflow-y: auto;
+    border-right: 1px solid rgba(108, 92, 231, 0.3);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+}
+
+.left h2 {
+    margin-top: 0;
+    color: #6c5ce7;
+    border-bottom: 2px solid #6c5ce7;
+    padding-bottom: 10px;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #aaa;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+textarea, select, input[type="text"], input[type="range"] {
+    width: 100%;
+    margin-top: 8px;
+    background: rgba(28, 28, 43, 0.8);
+    border: 1px solid rgba(108, 92, 231, 0.5);
+    color: white;
+    padding: 12px;
+    font-family: Arial;
+    font-size: 13px;
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+
+textarea:focus, select:focus, input:focus {
+    outline: none;
+    border-color: #6c5ce7;
+    background: rgba(28, 28, 43, 1);
+    box-shadow: 0 0 10px rgba(108, 92, 231, 0.3);
+}
+
+button {
+    width: 100%;
+    padding: 13px;
+    margin-top: 10px;
+    background: linear-gradient(135deg, #6c5ce7 0%, #7d70f0 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 6px;
+    transition: all 0.3s;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(108, 92, 231, 0.4);
+}
+
+button:disabled {
+    background: #444;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.button-group button {
+    flex: 1;
+    margin-top: 0;
+}
+
+.right {
+    flex: 1;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.result-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    min-height: 300px;
+    position: relative;
+}
+
+#result {
+    max-width: 95%;
+    max-height: 95%;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(108, 92, 231, 0.3);
+}
+
+.gallery {
+    max-height: 150px;
+    overflow-x: auto;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    display: flex;
+    gap: 10px;
+}
+
+.gallery img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.gallery img:hover {
+    border-color: #6c5ce7;
+    transform: scale(1.05);
+}
+
+#status {
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 15px;
+    font-size: 12px;
+    line-height: 1.5;
+    display: none;
+}
+
+#status.show {
+    display: block;
+}
+
+#status.info {
+    background: rgba(108, 92, 231, 0.2);
+    border: 1px solid #6c5ce7;
+    color: #87ceeb;
+}
+
+#status.success {
+    background: rgba(81, 207, 102, 0.2);
+    border: 1px solid #51cf66;
+    color: #51cf66;
+}
+
+#status.error {
+    background: rgba(255, 107, 107, 0.2);
+    border: 1px solid #ff6b6b;
+    color: #ff6b6b;
+}
+
+.loader {
+    border: 3px solid rgba(108, 92, 231, 0.2);
+    border-radius: 50%;
+    border-top: 3px solid #6c5ce7;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.step-value {
+    color: #6c5ce7;
+    font-weight: bold;
+}
+
+h3 {
+    margin-top: 0;
+    color: #fff;
+    font-size: 14px;
+}
+
+.info-badge {
+    background: rgba(76, 175, 80, 0.15);
+    border: 1px solid rgba(76, 175, 80, 0.5);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+    color: #4caf50;
+    margin-top: 10px;
+    line-height: 1.4;
+}
+</style>
+</head>
+
+<body>
+
+<div class="left">
+
+<h2>🎨 AI Image Studio</h2>
+
+<div class="info-badge">
+    ✓ No API key needed • Powered by Puter.js • Works instantly
+</div>
+
+<label for="model">AI Model</label>
+<select id="model">
+    <option value="flux">⚡ Flux (Fastest & Best)</option>
+    <option value="dall-e-3">✨ DALL-E 3 (Creative)</option>
+    <option value="stable-diffusion-xl">⭐ Stable Diffusion XL</option>
+    <option value="gemini-flash-image">🌟 Gemini Flash</option>
+</select>
+
+<label for="prompt">Prompt (Be Descriptive!)</label>
+<textarea id="prompt" rows="3">a serene futuristic city with bioluminescent plants, cyberpunk aesthetic, neon lights, cinematic lighting, highly detailed, 8k, masterpiece</textarea>
+
+<label for="style">Art Style</label>
+<select id="style">
+    <option value="">None</option>
+    <option value=", ultra realistic, cinematic lighting, award-winning photography, 8k">Photorealistic</option>
+    <option value=", anime style, vibrant colors, manga art, detailed">Anime</option>
+    <option value=", 3d render, octane render, ray tracing, volumetric lighting">3D Render</option>
+    <option value=", oil painting, renaissance, baroque, masterpiece">Classical Art</option>
+    <option value=", pixel art, 8-bit, retro gaming, nostalgic">Pixel Art</option>
+    <option value=", concept art, digital painting, trending on artstation">Concept Art</option>
+    <option value=", watercolor painting, ink wash, artistic">Watercolor</option>
+</select>
+
+<label for="negative">What to Avoid</label>
+<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, watermark, text, deformed, ugly, disfigured</textarea>
+
+<label for="aspectRatio">Aspect Ratio</label>
+<select id="aspectRatio">
+    <option value="1:1">Square (1:1)</option>
+    <option value="16:9">Landscape (16:9)</option>
+    <option value="9:16">Portrait (9:16)</option>
+    <option value="4:3">Standard (4:3)</option>
+</select>
+
+<div class="button-group">
+    <button id="generateBtn" onclick="generateImage()">🎨 GENERATE</button>
+    <button id="downloadBtn" onclick="downloadImage()" style="display:none;">⬇️ DOWNLOAD</button>
+    <button id="clearBtn" onclick="clearHistory()">🗑️ CLEAR</button>
+</div>
+
+<div id="status"></div>
+
+</div>
+
+<div class="right">
+
+<h3>Preview</h3>
+<div class="result-container">
+    <img id="result" style="display:none;"/>
+    <div class="loader" id="loader" style="display:none;"></div>
+</div>
+
+<h3>History</h3>
+<div class="gallery" id="gallery"></div>
+
+</div>
+
+<script src="https://js.puter.com/v2/"></script>
+
+<script>
+
+let currentImageUrl = null;
+let imageHistory = [];
+let isGenerating = false;
+
+function showStatus(message, type = 'info') {
+    const status = document.getElementById('status');
+    status.textContent = message;
+    status.className = `show ${type}`;
+}
+
+function hideStatus() {
+    document.getElementById('status').className = '';
+}
+
+async function generateImage() {
+    if (isGenerating) return;
+
+    try {
+        isGenerating = true;
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('downloadBtn').style.display = 'none';
+
+        const prompt = document.getElementById('prompt').value.trim();
+        const style = document.getElementById('style').value;
+        const negative = document.getElementById('negative').value;
+        const model = document.getElementById('model').value;
+        const aspectRatio = document.getElementById('aspectRatio').value;
+
+        if (!prompt) {
+            showStatus('❌ Please enter a prompt!', 'error');
+            document.getElementById('generateBtn').disabled = false;
+            return;
+        }
+
+        // Build the full prompt
+        let fullPrompt = prompt + style;
+
+        showStatus(`⏳ Generating with ${model}... (this may take 30-60 seconds)`, 'info');
+
+        // Use Puter.js AI API
+        const imageElement = await puter.ai.txt2img(fullPrompt, {
+            model: model,
+            negative_prompt: negative,
+            aspect_ratio: aspectRatio
+        });
+
+        if (!imageElement) {
+            throw new Error('Failed to generate image');
+        }
+
+        // Get the image source
+        const imageSrc = imageElement.src;
+        currentImageUrl = imageSrc;
+
+        // Display the image
+        document.getElementById('result').src = imageSrc;
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('downloadBtn').style.display = 'block';
+
+        addToHistory(imageSrc);
+
+        showStatus('✅ Image generated successfully!', 'success');
+
+    } catch (error) {
+        console.error('Generation error:', error);
+        showStatus(`❌ ${error.message || 'Failed to generate image. Try again!'}`, 'error');
+    } finally {
+        isGenerating = false;
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('loader').style.display = 'none';
+    }
+}
+
+function addToHistory(url) {
+    imageHistory.push(url);
+    
+    const img = document.createElement('img');
+    img.src = url;
+    img.onclick = () => {
+        document.getElementById('result').src = url;
+        document.getElementById('result').style.display = 'block';
+        currentImageUrl = url;
+        document.getElementById('downloadBtn').style.display = 'block';
+    };
+    
+    document.getElementById('gallery').insertBefore(img, document.getElementById('gallery').firstChild);
+    
+    // Keep only last 15 images in memory
+    if (imageHistory.length > 15) {
+        imageHistory.shift();
+        document.getElementById('gallery').removeChild(document.getElementById('gallery').lastChild);
+    }
+}
+
+function downloadImage() {
+    if (!currentImageUrl) return;
+    
+    const a = document.createElement('a');
+    a.href = currentImageUrl;
+    a.download = `ai-image-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function clearHistory() {
+    document.getElementById('gallery').innerHTML = '';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('downloadBtn').style.display = 'none';
+    imageHistory = [];
+    currentImageUrl = null;
+    hideStatus();
+}
+
+// Show welcome message
+window.addEventListener('load', () => {
+    showStatus('✓ Ready! Enter your prompt and click GENERATE', 'info');
+});
+
+</script>
+
+</body>
+</html>
