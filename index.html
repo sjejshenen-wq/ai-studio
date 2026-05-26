@@ -19,7 +19,7 @@ body {
 }
 
 .left {
-    width: 380px;
+    width: 400px;
     background: rgba(17, 17, 34, 0.95);
     padding: 20px;
     overflow-y: auto;
@@ -55,6 +55,7 @@ textarea, select, input[type="text"] {
     font-size: 13px;
     border-radius: 6px;
     transition: all 0.3s;
+    resize: vertical;
 }
 
 textarea:focus, select:focus, input:focus {
@@ -217,6 +218,17 @@ h3 {
     margin-top: 10px;
     line-height: 1.4;
 }
+
+.quality-note {
+    background: rgba(33, 150, 243, 0.15);
+    border: 1px solid rgba(33, 150, 243, 0.5);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
+    color: #2196f3;
+    margin-top: 10px;
+    line-height: 1.4;
+}
 </style>
 </head>
 
@@ -224,38 +236,50 @@ h3 {
 
 <div class="left">
 
-<h2>🎨 AI Image Studio</h2>
+<h2>🎨 Premium AI Studio</h2>
 
 <div class="info-badge">
-    ✓ Free AI Image Generation • No Sign-Up Required
+    ✓ High-Quality Generation • No Sign-Up
 </div>
 
-<label for="prompt">Prompt (Be Descriptive!)</label>
-<textarea id="prompt" rows="3">a serene futuristic city with bioluminescent plants, cyberpunk aesthetic, neon lights, cinematic lighting, highly detailed, 8k</textarea>
+<label for="prompt">📝 Detailed Prompt</label>
+<textarea id="prompt" rows="4">A stunning, highly detailed futuristic cyberpunk metropolis at night. Neon-lit skyscrapers with holographic billboards, bioluminescent plants in vertical gardens, flying cars, volumetric light rays, realistic reflections in chrome and glass surfaces, cinematic composition, 8K resolution, photorealistic, trending on ArtStation, masterpiece</textarea>
 
-<label for="style">Art Style</label>
+<div class="quality-note">
+💡 Tip: More specific details = Better results. Include lighting, mood, composition, and artistic style.
+</div>
+
+<label for="style">🎨 Art Style</label>
 <select id="style">
-    <option value="">None</option>
-    <option value=" ultra realistic, cinematic lighting, award-winning photography">Photorealistic</option>
-    <option value=" anime style, vibrant colors, manga art">Anime</option>
-    <option value=" 3d render, octane render, ray tracing">3D Render</option>
-    <option value=" oil painting, renaissance, baroque">Classical Art</option>
-    <option value=" pixel art, 8-bit, retro gaming">Pixel Art</option>
-    <option value=" concept art, digital painting">Concept Art</option>
+    <option value="photorealistic">Photorealistic (Most Realistic)</option>
+    <option value="concept-art">Concept Art (Artistic)</option>
+    <option value="oil-painting">Oil Painting (Classical)</option>
+    <option value="anime">Anime (Stylized)</option>
+    <option value="3d-render">3D Render (CGI)</option>
+    <option value="watercolor">Watercolor (Artistic)</option>
+    <option value="digital-art">Digital Art (Modern)</option>
 </select>
 
-<label for="negative">What to Avoid</label>
-<textarea id="negative" rows="2">blurry, low quality, distorted, bad anatomy, watermark, text</textarea>
+<label for="quality">⭐ Quality Level</label>
+<select id="quality">
+    <option value="high-quality, 8k, ultra detailed, award-winning">Ultra High (Slower)</option>
+    <option value="high quality, 4k, detailed, professional">High Quality</option>
+    <option value="good quality, detailed">Standard</option>
+</select>
 
-<label for="size">Image Size</label>
+<label for="negative">❌ What to Avoid</label>
+<textarea id="negative" rows="2">blurry, low quality, distorted, deformed, bad anatomy, ugly, watermark, text, words, letters, poorly drawn, low-res</textarea>
+
+<label for="size">📐 Resolution</label>
 <select id="size">
     <option value="512">512x512 (Fast)</option>
     <option value="640">640x640</option>
-    <option value="768">768x768 (Best)</option>
+    <option value="768">768x768 (Best Quality)</option>
+    <option value="832">832x832</option>
 </select>
 
 <div class="button-group">
-    <button id="generateBtn" onclick="generateImage()">🎨 GENERATE</button>
+    <button id="generateBtn" onclick="generateImage()">✨ GENERATE</button>
     <button id="downloadBtn" onclick="downloadImage()" style="display:none;">⬇️ DOWNLOAD</button>
 </div>
 <button id="clearBtn" onclick="clearHistory()">🗑️ CLEAR</button>
@@ -282,6 +306,17 @@ h3 {
 let currentImageUrl = null;
 let isGenerating = false;
 
+// Map style names to detailed quality prompts
+const styleMap = {
+    'photorealistic': 'ultra realistic, photorealistic, professional photography, cinematic lighting, volumetric light, color graded, award-winning, masterpiece',
+    'concept-art': 'concept art, digital painting, trending on ArtStation, professional, detailed, rich colors',
+    'oil-painting': 'oil painting, renaissance style, museum quality, masterpiece, brush strokes, classical art',
+    'anime': 'anime style, vibrant colors, detailed, manga art, cel-shading',
+    '3d-render': '3d render, octane render, ray tracing, volumetric lighting, photorealistic, cinema4d',
+    'watercolor': 'watercolor painting, ink wash, artistic, flowing brushstrokes, elegant',
+    'digital-art': 'digital art, illustration, professional, trending on artstation, highly detailed'
+};
+
 function showStatus(message, type = 'info') {
     const status = document.getElementById('status');
     status.textContent = message;
@@ -290,6 +325,27 @@ function showStatus(message, type = 'info') {
 
 function hideStatus() {
     document.getElementById('status').className = '';
+}
+
+function buildEnhancedPrompt(basePrompt, style, quality) {
+    // Get the style details
+    const styleDetails = styleMap[style] || style;
+    
+    // Combine: base prompt + style + quality
+    let fullPrompt = basePrompt;
+    
+    // Add style if not already in prompt
+    if (!fullPrompt.toLowerCase().includes(styleDetails.split(',')[0])) {
+        fullPrompt += ', ' + styleDetails;
+    }
+    
+    // Add quality modifiers
+    fullPrompt += ', ' + quality;
+    
+    // Add universal quality boosters
+    fullPrompt += ', intricate details, professional lighting, balanced composition, perfect anatomy, sharp focus, flawless';
+    
+    return fullPrompt;
 }
 
 async function generateImage() {
@@ -304,22 +360,24 @@ async function generateImage() {
 
         const prompt = document.getElementById('prompt').value.trim();
         const style = document.getElementById('style').value;
+        const quality = document.getElementById('quality').value;
         const negative = document.getElementById('negative').value;
         const size = document.getElementById('size').value;
 
         if (!prompt) {
-            showStatus('❌ Please enter a prompt!', 'error');
+            showStatus('❌ Please enter a detailed prompt!', 'error');
             document.getElementById('generateBtn').disabled = false;
             return;
         }
 
-        let fullPrompt = prompt + style;
+        // Build enhanced prompt with quality boosters
+        const enhancedPrompt = buildEnhancedPrompt(prompt, style, quality);
         
-        showStatus(`⏳ Generating image...`, 'info');
+        showStatus(`⏳ Generating high-quality image... ${size}x${size}`, 'info');
 
-        // Using Pollinations.ai API - more reliable
-        const encodedPrompt = encodeURIComponent(fullPrompt);
-        const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size}&height=${size}&seed=${Math.floor(Math.random() * 999999)}`;
+        // Using Pollinations.ai API with quality parameters
+        const encodedPrompt = encodeURIComponent(enhancedPrompt);
+        const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size}&height=${size}&seed=${Math.floor(Math.random() * 999999)}&nologo=true`;
 
         // Test if image loads
         const img = new Image();
@@ -331,12 +389,12 @@ async function generateImage() {
             document.getElementById('downloadBtn').style.display = 'block';
             
             addToHistory(url);
-            showStatus('✅ Image generated successfully!', 'success');
+            showStatus('✅ High-quality image generated! Perfect output 🎉', 'success');
             document.getElementById('generateBtn').disabled = false;
         };
 
         img.onerror = () => {
-            showStatus('❌ Failed to generate. Try a different prompt!', 'error');
+            showStatus('⚠️ Generation failed. Try simplifying your prompt or use fewer quality terms.', 'error');
             document.getElementById('generateBtn').disabled = false;
         };
 
@@ -385,7 +443,7 @@ function clearHistory() {
 }
 
 window.addEventListener('load', () => {
-    showStatus('✓ Ready! Enter your prompt and click GENERATE', 'info');
+    showStatus('✓ Ready! Detailed prompts = Better images. Click GENERATE!', 'info');
 });
 
 </script>
